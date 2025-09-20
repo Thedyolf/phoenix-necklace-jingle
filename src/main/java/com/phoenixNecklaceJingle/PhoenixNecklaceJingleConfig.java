@@ -30,8 +30,8 @@ public interface PhoenixNecklaceJingleConfig extends Config
     @ConfigItem(
             keyName = "soundID",
             name = "Sound ID",
-            description = "The sound ID you wish to play. <br>\" + " +
-                    "Sound List: https://oldschool.runescape.wiki/w/List_of_in-game_sound_IDs\"",
+            description = "The sound ID you wish to play. <br>" +
+                    "Sound List: https://oldschool.runescape.wiki/w/List_of_in-game_sound_IDs",
             position = 1
     )
     default int soundID()
@@ -41,7 +41,8 @@ public interface PhoenixNecklaceJingleConfig extends Config
     @ConfigItem(
             keyName = "enableCustomSound",
             name = "Enable Custom Sound",
-            description = "Use a custom sound to play rather than an in-game sound ID",
+            description = "Use a custom sound to play rather than an in-game sound  <br>" +
+                    "Replace custom.wav in the .runelite folder with your desired sound",
             position = 3,
             section = CUSTOM_JINGLE
     )
