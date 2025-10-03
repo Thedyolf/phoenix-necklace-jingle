@@ -16,6 +16,8 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.util.Text;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 @Slf4j
 @PluginDescriptor(
@@ -33,7 +35,7 @@ public class PhoenixNecklaceJinglePlugin extends Plugin
     protected void startUp() throws Exception
     {
         // Create the empty WAV at startup if it's missing
-        ensureEmptyWavExists();
+        ensureDefaultSoundExists();
     }
 
     @Override
@@ -46,67 +48,28 @@ public class PhoenixNecklaceJinglePlugin extends Plugin
         return new File(rlDir, DEFAULT_SUBPATH);
     }
 
-    /**
-     * Ensure a valid (header-only) PCM 16-bit WAV exists at the subpath.
-     * Writes a RIFF/WAVE header with 0 data-byte payload.
-     */
-    private void ensureEmptyWavExists()
+    private void ensureDefaultSoundExists()
     {
         File out = resolveSoundFile();
-        try
-        {
-            File parent = out.getParentFile();
-            if (parent != null && !parent.exists())
-            {
-                parent.mkdirs();
-            }
+        if (out.exists()) return;
 
-            if (!out.exists())
+        out.getParentFile().mkdirs();
+        try (InputStream in = getClass().getResourceAsStream("/custom.wav"))
+        {
+            if (in != null)
             {
-                writeEmptyPcmWav(out, /*sampleRate*/44100, /*channels*/1, /*bits*/16);
-                log.info("Created empty WAV: {}", out.getAbsolutePath());
+                Files.copy(in, out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+            else
+            {
+                log.warn("Bundled default sound missing at /custom.wav");
             }
         }
         catch (IOException e)
         {
-            log.warn("Failed to create empty WAV at {}", out.getAbsolutePath(), e);
+            log.warn("Could not write default sound to {}", out, e);
         }
     }
-
-    /**
-     * Writes a minimal valid WAV (RIFF) header with zero data bytes.
-     */
-    private static void writeEmptyPcmWav(File file, int sampleRate, int channels, int bitsPerSample) throws IOException
-    {
-        int dataSize = 0; // empty/silent
-        int byteRate = sampleRate * channels * (bitsPerSample / 8);
-        int blockAlign = channels * (bitsPerSample / 8);
-        int riffChunkSize = 36 + dataSize; // 4 + (8 + Subchunk1) + (8 + Subchunk2)
-
-        try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(file)))
-        {
-            // RIFF header
-            dos.writeBytes("RIFF");
-            dos.writeInt(Integer.reverseBytes(riffChunkSize));
-            dos.writeBytes("WAVE");
-
-            // fmt  subchunk
-            dos.writeBytes("fmt ");
-            dos.writeInt(Integer.reverseBytes(16));                   // Subchunk1Size for PCM
-            dos.writeShort(Short.reverseBytes((short) 1));              // AudioFormat = 1 (PCM)
-            dos.writeShort(Short.reverseBytes((short) channels));       // NumChannels
-            dos.writeInt(Integer.reverseBytes(sampleRate));             // SampleRate
-            dos.writeInt(Integer.reverseBytes(byteRate));               // ByteRate
-            dos.writeShort(Short.reverseBytes((short) blockAlign));     // BlockAlign
-            dos.writeShort(Short.reverseBytes((short) bitsPerSample));  // BitsPerSample
-
-            // data subchunk
-            dos.writeBytes("data");
-            dos.writeInt(Integer.reverseBytes(dataSize));           // Subchunk2Size (0)
-            // No data bytes written (empty)
-        }
-    }
-
     private static float volumePercentToDb(int volPercent)
     {
         int v = Math.max(0, Math.min(100, volPercent));
@@ -115,7 +78,7 @@ public class PhoenixNecklaceJinglePlugin extends Plugin
 
     private void playCustomSound()
     {
-        ensureEmptyWavExists();
+        ensureDefaultSoundExists();
         File soundFile = resolveSoundFile();
         if (!soundFile.exists())
         {
